@@ -17,8 +17,6 @@ package worker
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-
 	apisgcp "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
 	gcpapi "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
 	gcpapihelper "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/helper"
@@ -26,6 +24,8 @@ import (
 	"github.com/gardener/gardener-extension-provider-gcp/pkg/internal"
 	"github.com/gardener/gardener-extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener-extensions/pkg/controller/worker/genericactuator"
+	"path/filepath"
+	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -133,13 +133,35 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 		}
 
 		for zoneIndex, zone := range pool.Zones {
+			disks := make([]map[string]interface{}, 0)
+			disks = append(disks, disk)
+
+			componentName, ok := pool.Labels["gardener.wg.prefix.name"]
+			if !ok {
+				fmt.Println("componet does not contain gardener.wg.prefix.name")
+			} else {
+				if strings.Contains(strings.ToLower(componentName), strings.ToLower("tikv")) {
+					disks = append(disks, map[string]interface{}{
+						"autoDelete": true,
+						"boot":       false,
+						"sizeGb":     volumeSize,
+						"type":       "SCRATCH",
+						"interface":  "NVME",
+						"image":      machineImage,
+						"labels": map[string]interface{}{
+							"name": w.worker.Name,
+						},
+					})
+				}
+			}
+
 			machineClassSpec := map[string]interface{}{
 				"region":             w.worker.Spec.Region,
 				"zone":               zone,
 				"canIpForward":       true,
 				"deletionProtection": false,
 				"description":        fmt.Sprintf("Machine of Shoot %s created by machine-controller-manager.", w.worker.Name),
-				"disks":              []map[string]interface{}{disk},
+				"disks":              disks,
 				"labels": map[string]interface{}{
 					"name": w.worker.Name,
 				},
