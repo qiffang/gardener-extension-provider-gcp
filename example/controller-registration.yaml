@@ -22,7 +22,7 @@ spec:
       values:
         image:
           repository: qiffang199133/provider-gcp
-          tag: v1.3.2
+          tag: v1.3.4
         imageVectorOverwrite: |
           images:
           - name: machine-controller-manager

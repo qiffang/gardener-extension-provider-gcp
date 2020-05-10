@@ -17,6 +17,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	apisgcp "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
 	gcpapi "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp"
 	gcpapihelper "github.com/gardener/gardener-extension-provider-gcp/pkg/apis/gcp/helper"
@@ -24,8 +28,6 @@ import (
 	"github.com/gardener/gardener-extension-provider-gcp/pkg/internal"
 	"github.com/gardener/gardener-extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener-extensions/pkg/controller/worker/genericactuator"
-	"path/filepath"
-	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -152,6 +154,47 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 							"name": w.worker.Name,
 						},
 					})
+
+					if strings.HasPrefix(pool.MachineType, "n2") {
+						for i := 0; i < 2; i++ {
+							disks = append(disks, map[string]interface{}{
+								"autoDelete": true,
+								"boot":       false,
+								"sizeGb":     volumeSize,
+								"type":       "SCRATCH",
+								"interface":  "NVME",
+								"image":      machineImage,
+								"labels": map[string]interface{}{
+									"name": w.worker.Name,
+								},
+							})
+						}
+					} else {
+						mArry := strings.Split(pool.MachineType, "-")
+						if len(mArry) > 1 {
+							mType, err := strconv.ParseInt(mArry[len(mArry)-1], 10, 64)
+							if err != nil {
+								//ignore
+							} else {
+								if mType >= 8 {
+									for i := 0; i < 2; i++ {
+										disks = append(disks, map[string]interface{}{
+											"autoDelete": true,
+											"boot":       false,
+											"sizeGb":     volumeSize,
+											"type":       "SCRATCH",
+											"interface":  "NVME",
+											"image":      machineImage,
+											"labels": map[string]interface{}{
+												"name": w.worker.Name,
+											},
+										})
+									}
+								}
+							}
+						}
+					}
+
 				}
 			}
 
