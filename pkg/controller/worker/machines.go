@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -133,6 +134,71 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			}
 
 			disks = append(disks, disk)
+
+			componentName, ok := pool.Labels["gardener.wg.prefix.name"]
+			if !ok {
+				fmt.Println("componet does not contain gardener.wg.prefix.name")
+			} else {
+				volumeSize, err := worker.DiskSize((*pool.Volume).Size)
+				if err != nil {
+					return err
+				}
+
+				if strings.Contains(strings.ToLower(componentName), strings.ToLower("tikv")) {
+					disks = append(disks, map[string]interface{}{
+						"autoDelete": true,
+						"boot":       false,
+						"sizeGb":     volumeSize,
+						"type":       "SCRATCH",
+						"interface":  "NVME",
+						"image":      machineImage,
+						"labels": map[string]interface{}{
+							"name": w.worker.Name,
+						},
+					})
+
+					if strings.HasPrefix(pool.MachineType, "n2") {
+						for i := 0; i < 2; i++ {
+							disks = append(disks, map[string]interface{}{
+								"autoDelete": true,
+								"boot":       false,
+								"sizeGb":     volumeSize,
+								"type":       "SCRATCH",
+								"interface":  "NVME",
+								"image":      machineImage,
+								"labels": map[string]interface{}{
+									"name": w.worker.Name,
+								},
+							})
+						}
+					} else {
+						mArry := strings.Split(pool.MachineType, "-")
+						if len(mArry) > 1 {
+							mType, err := strconv.ParseInt(mArry[len(mArry)-1], 10, 64)
+							if err != nil {
+								//ignore
+							} else {
+								if mType >= 8 {
+									for i := 0; i < 2; i++ {
+										disks = append(disks, map[string]interface{}{
+											"autoDelete": true,
+											"boot":       false,
+											"sizeGb":     volumeSize,
+											"type":       "SCRATCH",
+											"interface":  "NVME",
+											"image":      machineImage,
+											"labels": map[string]interface{}{
+												"name": w.worker.Name,
+											},
+										})
+									}
+								}
+							}
+						}
+					}
+
+				}
+			}
 		}
 
 		// additional volumes
