@@ -143,20 +143,20 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				fmt.Println("componet does not contain gardener.wg.prefix.name")
 			} else {
 				if strings.Contains(strings.ToLower(componentName), strings.ToLower("tikv")) {
-					disks = append(disks, map[string]interface{}{
-						"autoDelete": true,
-						"boot":       false,
-						"sizeGb":     volumeSize,
-						"type":       "SCRATCH",
-						"interface":  "NVME",
-						"image":      machineImage,
-						"labels": map[string]interface{}{
-							"name": w.worker.Name,
-						},
-					})
+					//disks = append(disks, map[string]interface{}{
+					//	"autoDelete": true,
+					//	"boot":       false,
+					//	"sizeGb":     volumeSize,
+					//	"type":       "SCRATCH",
+					//	"interface":  "NVME",
+					//	"image":      machineImage,
+					//	"labels": map[string]interface{}{
+					//		"name": w.worker.Name,
+					//	},
+					//})
 
 					if strings.HasPrefix(pool.MachineType, "n2") {
-						for i := 0; i < 2; i++ {
+						for i := 0; i < 3; i++ {
 							disks = append(disks, map[string]interface{}{
 								"autoDelete": true,
 								"boot":       false,
@@ -177,7 +177,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 								//ignore
 							} else {
 								if mType >= 8 {
-									for i := 0; i < 2; i++ {
+									for i := 0; i < 3; i++ {
 										disks = append(disks, map[string]interface{}{
 											"autoDelete": true,
 											"boot":       false,
