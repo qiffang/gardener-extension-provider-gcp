@@ -164,7 +164,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 							//ignore
 						} else {
 							if mType >= 8 {
-								for i := 0; i < 3; i++ {
+								for i := 0; i < 5; i++ {
 									disks = append(disks, map[string]interface{}{
 										"autoDelete": true,
 										"boot":       false,
